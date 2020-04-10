@@ -1,3 +1,5 @@
+Vue.config.devtools = true
+
 Vue.component('product', {
     props: {
         premium: {
@@ -28,6 +30,7 @@ Vue.component('product', {
                     variantQuantity: 0,
                 },
             ],
+            reviews: [],
             cart: 0,
         }
     },
@@ -56,34 +59,147 @@ Vue.component('product', {
         updateProduct: function (index) {
             this.selectedVariant = index
         },
+        addReview: function (productReview) {
+            this.reviews.push(productReview)
+        }
     },
     template: `
     <div class="product">
-                <div class="product-image">
-                    <img v-bind:src="image">
-                </div>
-                <div class="product-info">
-                    <h1>{{ title }}</h1>
-                    <h2>This is a {{ sample }}</h2>
-                    <p v-if="inventory > 10 && inStock">InStock</p>
-                    <p v-else-if="inventory <= 10 && inventory > 0">Almost Sold Out</p>
-                <p v-else :style="{textDecoration: textStyle}">Out Of Stock</p>
-                <p>User is Premium {{ premium }}</p>
-                <p>Shipping is {{ shipping }}</p>
-                    <ul>
-                        <li v-for="detail in details"> {{ detail }}</li>
-                    </ul>
-                    <div v-for="(variant, index) in variants" 
-                         :key="variant.variantId"
-                         class="color-box"
-                         :style="{ backgroundColor: variant.variantColor}"
-                         @mouseover="updateProduct(index)">
-                    </div>
+              
+            <div class="product-image">
+              <img :src="image" />
+            </div>
+      
+            <div class="product-info">
+                <h1>{{ product }}</h1>
+                <p v-if="inStock">In Stock</p>
+                <p v-else>Out of Stock</p>
+                <p>Shipping: {{ shipping }}</p>
+      
+                <ul>
+                  <li v-for="detail in details">{{ detail }}</li>
+                </ul>
+      
+                <div class="color-box"
+                     v-for="(variant, index) in variants" 
+                     :key="variant.variantId"
+                     :style="{ backgroundColor: variant.variantColor }"
+                     @mouseover="updateProduct(index)"
+                     >
+                </div> 
+      
+                <button v-on:click="addToCart" 
+                  :disabled="!inStock"
+                  :class="{ disabledButton: !inStock }"
+                  >
+                Add to cart
+                </button>
+      
+             </div>  
+             <product-tabs></product-tabs>
+             <div>
+             <p v-if="!reviews.length">There are no reviews yet.</p>
+             <ul v-else>
+             <li v-for="review in reviews">
+             <p>{{ review.name }}</p>
+             <p>{{ review.rating }}</p>
+             <p>{{ review.review }}</p>
+             </li>
+             </ul>
+             </div>
 
-                    <button v-on:click="addToCart" :disabled="!inStock"
-                            :class="{ disabledButton: !inStock }">Add To Cart</button>
-                </div>
+             <product-review @review-submitted="addReview"></product-review>
+          
+          </div>
                 `,
+})
+
+Vue.component('product-review', {
+    template: `
+    <form class="review-form" @submit.prevent="onSubmit">
+    <p v-if="errors.length">
+    <b>Please correct the following error(s)</b>
+    <ul>
+    <li v-for="error in errors">{{ error }}</li>
+    </ul>
+    </p>
+      <p>
+        <label for="name">Name:</label>
+        <input id="name" v-model="name" placeholder="name">
+      </p>
+      
+      <p>
+        <label for="review">Review:</label>      
+        <textarea id="review" v-model="review"></textarea>
+      </p>
+      
+      <p>
+        <label for="rating">Rating:</label>
+        <select id="rating" v-model.number="rating">
+          <option>5</option>
+          <option>4</option>
+          <option>3</option>
+          <option>2</option>
+          <option>1</option>
+        </select>
+      </p>
+          
+      <p>
+        <input type="submit" value="Submit">  
+      </p>    
+    
+    </form>
+    `,
+    data() {
+        return {
+            name: null,
+            review: null,
+            rating: null,
+            errors: [],
+        }
+    },
+    methods: {
+        onSubmit() {
+            if (this.name && this.review && this.rating) {
+                this.errors = []
+                let productReview = {
+                    name: this.name,
+                    review: this.review,
+                    rating: this.rating,
+                }
+                this.$emit('review-submitted', productReview)
+                this.name = null
+                this.review = null
+                this.rating = null  
+            }else{
+                this.errors = []
+                if (!this.name) this.errors.push('Name Required')
+                if (!this.review) this.errors.push('Review Required')
+                if (!this.rating) this.errors.push('Rating Required')
+            }
+           
+        }
+    }
+})
+
+Vue.component('product-tabs', {
+    data(){
+        return {
+            tabs: ["Reviews", "Make a Review"],
+            selectedTab: 'Reviews'
+        }
+    },
+    template: `
+    <div>
+    <span class-"tab" 
+    :class="{ activeTab: selsectedTab === tab}"
+    v-for="(tab, index) in tabs" 
+    :key="index"
+    @click="selsectedTab = tab">
+    {{ tab }}
+    </span>
+    </div>
+    `,
 })
 var app = new Vue({
     el: '#app',
